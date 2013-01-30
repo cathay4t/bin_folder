@@ -1,0 +1,15 @@
+#!/bin/bash
+
+PASSWD=`cat ~/.passwd/.rh_irc_pass`;
+
+dcop konversation irc raw \
+    "irc.devel.redhat.com" "PRIVMSG userserv :login fge $PASSWD"
+sleep 5
+dcop konversation irc raw \
+    "irc.devel.redhat.com" "PRIVMSG nickserv :regain fge"
+dcop konversation irc raw \
+    "irc.devel.redhat.com" "/NICK fge"
+dcop konversation irc raw \
+    "irc.devel.redhat.com" "PRIVMSG chanserv :invite #ktd"
+dcop konversation irc raw \
+    "irc.devel.redhat.com" "JOIN #ktd"

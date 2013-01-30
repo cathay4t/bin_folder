@@ -1,0 +1,208 @@
+#!/usr/bin/perl -w
+# Copyright (C) 2012  Gris Ge <cnfourt@gmail.com>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+
+my @SKIP_NICS = qw/lo tun0 vboxnet0/;
+
+sub main() {
+    my $time_interval = 1;
+    my @active_nics;
+    my $flag_looping;
+    if ( grep { "-t" eq $_ } @ARGV ) {
+        $flag_looping = 1;
+    }
+    if ( $ARGV[0] && $ARGV[0] ne "-t" ) {
+        my $nic      = $ARGV[0];
+        my @all_nics = all_nic();
+        unless ( grep { $_ eq $nic } @all_nics ) {
+            print "FAIL: Specified NIC $nic not exists\n";
+            return undef;
+        }
+        push @active_nics, $nic;
+    }
+    else {
+        @active_nics = active_nic();
+        unless (@active_nics) {
+            print "FAIL: No NIC has network flow running.\n";
+            return undef;
+        }
+    }
+    do {
+        my %nic_2_rx_change;
+        my %nic_2_tx_change;
+        foreach my $nic (@active_nics) {
+            my $rx_bytes = rx_bytes($nic);
+            my $tx_bytes = tx_bytes($nic);
+            next unless defined $rx_bytes;
+            $nic_2_rx_change{$nic} = $rx_bytes;
+            $nic_2_tx_change{$nic} = $tx_bytes;
+        }
+        sleep $time_interval;
+        my %nic_2_rx_bytes;
+        my %nic_2_tx_bytes;
+        my %nic_2_rx_speed;
+        my %nic_2_tx_speed;
+        foreach my $nic (@active_nics) {
+            my $rx_bytes = rx_bytes($nic);
+            my $tx_bytes = tx_bytes($nic);
+            next unless defined $rx_bytes;
+            $nic_2_rx_change{$nic} = ( $rx_bytes - $nic_2_rx_change{$nic} );
+            $nic_2_tx_change{$nic} = ( $tx_bytes - $nic_2_tx_change{$nic} );
+            $nic_2_rx_bytes{$nic}  = size_bytes_2_size_human($rx_bytes);
+            $nic_2_tx_bytes{$nic}  = size_bytes_2_size_human($tx_bytes);
+            $nic_2_rx_bytes{$nic} =~ s/([0-9])([A-Z])/$1 $2/;
+            $nic_2_tx_bytes{$nic} =~ s/([0-9])([A-Z])/$1 $2/;
+            my $rx_speed = size_bytes_2_size_human(
+                $nic_2_rx_change{$nic} / $time_interval );
+            $rx_speed =~ s/([0-9])([A-Z])/$1 $2/;
+            $rx_speed =~ s/$/\/s/;
+            $nic_2_rx_speed{$nic} = $rx_speed;
+            my $tx_speed = size_bytes_2_size_human(
+                $nic_2_tx_change{$nic} / $time_interval );
+            $tx_speed =~ s/([0-9])([A-Z])/$1 $2/;
+            $tx_speed =~ s/$/\/s/;
+            $nic_2_tx_speed{$nic} = $tx_speed;
+        }
+
+        # report speed
+        foreach my $nic (@active_nics) {
+            printf "%15s %s speed report %15s\n", "=" x 15, $nic, "=" x 15;
+            printf " RX Speed = %13s, RX Bytes = %11s\n",
+              $nic_2_rx_speed{$nic}, $nic_2_rx_bytes{$nic};
+            printf " TX Speed = %13s, TX Bytes = %11s\n",
+              $nic_2_tx_speed{$nic}, $nic_2_tx_bytes{$nic};
+        }
+    } while ($flag_looping);
+    1;
+}
+
+sub active_nic() {
+    my $time_interval = '2';
+    my @all_nics      = all_nic();
+    return undef unless @all_nics;
+    my %nic_2_rx;
+    my %nic_2_tx;
+    foreach my $nic (@all_nics) {
+        next unless $nic;
+        my $rx_bytes = rx_bytes($nic);
+        next unless defined $rx_bytes;
+        my $tx_bytes = tx_bytes($nic);
+        next unless defined $rx_bytes;
+        $nic_2_rx{$nic} = $rx_bytes;
+        $nic_2_tx{$nic} = $tx_bytes;
+    }
+    sleep $time_interval;
+    my @active_nics;
+    foreach my $nic (@all_nics) {
+        next unless $nic;
+        my $rx_bytes = rx_bytes($nic);
+        push @active_nics, $nic and next if $nic_2_rx{$nic} ne $rx_bytes;
+        my $tx_bytes = tx_bytes($nic);
+        push @active_nics, $nic if $nic_2_tx{$nic} ne $tx_bytes;
+    }
+    return @active_nics;
+}
+
+sub rx_bytes($) {
+    my $nic = shift;
+    return undef unless $nic;
+    my $sys_rx_path = "/sys/class/net/$nic/statistics/rx_bytes";
+    return undef unless -f $sys_rx_path;
+    my $rx_bytes = `cat $sys_rx_path`;
+    chomp $rx_bytes;
+    return $rx_bytes;
+}
+
+sub tx_bytes($) {
+    my $nic = shift;
+    return undef unless $nic;
+    my $sys_tx_path = "/sys/class/net/$nic/statistics/tx_bytes";
+    return undef unless -f $sys_tx_path;
+    my $tx_bytes = `cat $sys_tx_path`;
+    chomp $tx_bytes;
+    return $tx_bytes;
+}
+
+sub all_nic() {
+    my $sys_net_path = "/sys/class/net/";
+    opendir( my $fd_sys_net, $sys_net_path );
+    my @all_nics;
+    foreach my $nic ( readdir $fd_sys_net ) {
+        next unless $nic;
+        next if grep { $_ eq $nic } @SKIP_NICS;
+        next if ( ( $nic =~ /^\.$/ ) || ( $nic =~ /^\.\.$/ ) );
+        push @all_nics, $nic;
+    }
+    return @all_nics;
+}
+
+sub size_human_2_size_bytes($) {
+    my $size_human = shift;
+    return undef unless $size_human =~ /[0-9]/;    # need at least 1 number
+    my $size_bytes;
+    my $unit;
+    my $number;
+    if ( $size_human =~ /([\-0-9\.]+)(Ki|Mi|Gi|Ti){0,1}B$/ ) {
+        $number = $1;
+        $unit   = $2;
+    }
+    else { return undef; }
+    $size_bytes = $number;
+    if ( $unit eq "Ki" ) {
+        $size_bytes *= 1024;
+    }
+    elsif ( $unit eq "Mi" ) {
+        $size_bytes *= 1024 * 1024;
+    }
+    elsif ( $unit eq "Gi" ) {
+        $size_bytes *= 1024 * 1024 * 1024;
+    }
+    elsif ( $unit eq "Ti" ) {
+        $size_bytes *= 1024 * 1024 * 1024 * 1024;
+    }
+    $size_bytes;
+}    # End of size_human_2_size_bytes()
+
+sub size_bytes_2_size_human($) {
+    my $size_bytes = shift;
+    return undef unless defined $size_bytes;
+    $size_bytes =~ s/,//g;
+    return undef unless $size_bytes =~ /^(\-){0,1}[0-9\.]+$/;
+    my $size_human;
+    my $number_1kib = size_human_2_size_bytes('1KiB');
+    my $number_1mib = size_human_2_size_bytes('1MiB');
+    my $number_1gib = size_human_2_size_bytes('1GiB');
+    my $number_1tib = size_human_2_size_bytes('1TiB');
+    if ( $size_bytes >= $number_1tib ) {
+        $size_human = sprintf( "%.2fTiB", $size_bytes / $number_1tib );
+    }
+    elsif ( $size_bytes >= $number_1gib ) {
+        $size_human = sprintf( "%.2fGiB", $size_bytes / $number_1gib );
+    }
+    elsif ( $size_bytes >= $number_1mib ) {
+        $size_human = sprintf( "%.2fMiB", $size_bytes / $number_1mib );
+    }
+    elsif ( $size_bytes >= $number_1kib ) {
+        $size_human = sprintf( "%.2fKiB", $size_bytes / $number_1kib );
+    }
+    else {
+        $size_human = "${size_bytes}   B";
+    }
+    return $size_human;
+}    # End of size_bytes_2_size_human()
+
+main();
