@@ -1,0 +1,29 @@
+#!/usr/bin/python
+import pyotp;
+import os;
+
+'''
+yum install perl-MIME-Base32
+cat > base32.pl << "EOF"
+#!/usr/bin/perl
+
+use MIME::Base32 qw( RFC );
+
+undef $/;  # in case stdin has newlines
+$string = <STDIN>;
+
+$encoded = MIME::Base32::encode($string);
+
+print "$encoded\n";
+EOF
+
+chmod 755 base32.pl
+
+dd if=/dev/random of=/tmp/key bs=1 count=20
+cat /tmp/key | xxd -ps          # this is for server site
+cat /tmp/key | ./base32.pl      # this is for app site
+'''
+
+base32_str_fd= open(os.getenv('HOME') + '/.passwd/.token', 'r');
+base32_str= base32_str_fd.read().rstrip('\n');
+print pyotp.TOTP(base32_str).now();
