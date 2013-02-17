@@ -3,7 +3,8 @@ import pyotp;
 import os;
 
 '''
-yum install perl-MIME-Base32
+#### Initial setup
+yum install perl-MIME-Base32 python-pyotp -y
 cat > base32.pl << "EOF"
 #!/usr/bin/perl
 
@@ -20,8 +21,12 @@ EOF
 chmod 755 base32.pl
 
 dd if=/dev/random of=/tmp/key bs=1 count=20
-cat /tmp/key | xxd -ps          # this is for server site
-cat /tmp/key | ./base32.pl      # this is for app site
+mkdir ~/.passwd
+chmod 700 ~/.passwd
+cat /tmp/key | ./base32.pl > ~/.passwd/.token
+cat /tmp/key | xxd -ps
+# put this output to OTP server, "enroll TOTP Token", sha1, 30 seconds
+rm -f /tmp/key
 '''
 
 base32_str_fd= open(os.getenv('HOME') + '/.passwd/.token', 'r');
