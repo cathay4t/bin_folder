@@ -17,6 +17,7 @@
 use strict;
 
 my $download_folder = "$ENV{HOME}/Downloads";
+my @file_ext_lists = ( 'avi', 'rm', 'rmvb', 'mkv','mp4', 'part','wmv',);
 
 sub call_smp($){
     my $file_path = shift;
@@ -25,18 +26,19 @@ sub call_smp($){
 
 sub find_latest_movie($){
     my $folder = shift;
-    my @file_ext_lists = ( 'avi', 'rm', 'rmvb', 'mkv','mp4', 'part');
     opendir my $fd_download, $folder
       or die "FAIL: Cannot open dir $folder: $!\n";
     my $latest_file;
     my $latest_time;
     foreach my $file_name ( readdir ($fd_download)){
+        next if $file_name =~ /^\./;
         if ( -d "$folder/$file_name" ){
             opendir my $fd_level_2_folder, "$folder/$file_name"
               or die "FAIL: cannot open dir $folder/$file_name\n";
             foreach my $file_name_2 ( readdir ($fd_level_2_folder)){
                 next unless -f "$folder/$file_name/$file_name_2";
-                next unless grep { $file_name_2 =~ /\.$_$/ } @file_ext_lists;
+                next unless grep { $file_name_2 =~ /\.$_$/i }
+                  @file_ext_lists;
                 my $tmp_time = (stat("$folder/$file_name/$file_name_2"))[9];
                 if ($latest_time <= $tmp_time ){
                     $latest_file = "$folder/$file_name/$file_name_2";
@@ -59,6 +61,6 @@ sub main(){
     my $latest_movie = find_latest_movie($download_folder);
     print "$latest_movie\n";
     return undef unless $latest_movie;
-    call_smp($latest_movie);
+#    call_smp($latest_movie);
 }
 main;
