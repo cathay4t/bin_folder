@@ -17,7 +17,7 @@
 use strict;
 
 my $download_folder = "$ENV{HOME}/Downloads";
-my @file_ext_lists = ( 'avi', 'rm', 'rmvb', 'mkv','mp4', 'part','wmv',);
+my @file_ext_lists = ( 'avi', 'rm', 'rmvb', 'mkv','mp4', 'part','wmv');
 
 sub call_smp($){
     my $file_path = shift;
@@ -47,7 +47,7 @@ sub find_latest_movie($){
             }
         }
         next unless -f "$folder/$file_name";
-        next unless grep { $file_name =~ /\.$_$/ } @file_ext_lists;
+        next unless grep { $file_name =~ /\.$_$/i } @file_ext_lists;
         my $tmp_time = (stat("$folder/$file_name"))[9];
         if ($latest_time <= $tmp_time ){
             $latest_file = "$folder/$file_name";
@@ -61,6 +61,6 @@ sub main(){
     my $latest_movie = find_latest_movie($download_folder);
     print "$latest_movie\n";
     return undef unless $latest_movie;
-    call_smp($latest_movie);
+#    call_smp($latest_movie);
 }
 main;
