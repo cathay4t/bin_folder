@@ -39,9 +39,16 @@ my @feeds = (
         artist => 'BBC',
     },
     +{
-        name => "NBC Nightly News",
+        name => "NBC Nightly News Audio",
         url  =>
         "http://podcastfeeds.nbcnews.com/audio/podcast/MSNBC-Nightly.xml",
+        max => 2,
+        artist => 'NBC',
+    },
+    +{
+        name => "NBC Nightly News Video",
+        url  =>
+        "http://podcastfeeds.nbcnews.com/audio/podcast/MSNBC-NN-NETCAST-M4V.xml",
         max => 2,
         artist => 'NBC',
     },
@@ -60,6 +67,7 @@ sub main() {
             -upgrade_tag      => 'id3v2.3',
             -force_genre      => 'podcast',
             -force_artist     => $ref_feed->{artist},
+            -force_album      => $ref_feed->{name},
             -env_proxy        => 1,
         );
         $feed->fetch_pods;
