@@ -61,6 +61,6 @@ sub main(){
     my $latest_movie = find_latest_movie($download_folder);
     print "$latest_movie\n";
     return undef unless $latest_movie;
-#    call_smp($latest_movie);
+    call_smp($latest_movie);
 }
 main;
