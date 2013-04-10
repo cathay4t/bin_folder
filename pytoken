@@ -26,6 +26,7 @@ chmod 700 ~/.passwd
 cat /tmp/key | ./base32.pl > ~/.passwd/.token
 cat /tmp/key | xxd -ps
 # put this output to OTP server, "enroll TOTP Token", sha1, 30 seconds
+# perfrom 'resync' on OTP server
 rm -f /tmp/key
 '''
 
