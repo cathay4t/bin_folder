@@ -1,15 +1,18 @@
 #!/bin/bash
 
 PASSWD=`cat ~/.passwd/.rh_irc_pass`;
+SRV_NAME=`qdbus org.kde.konversation /irc org.kde.konversation.listServers`;
 
-qdbus org.kde.konversation /irc org.kde.konversation.raw \
-    "irc.devel.redhat.com" "PRIVMSG userserv :login fge $PASSWD"
-sleep 5
-qdbus org.kde.konversation /irc org.kde.konversation.raw \
-    "irc.devel.redhat.com" "PRIVMSG nickserv :regain fge"
-qdbus org.kde.konversation /irc org.kde.konversation.raw \
-    "irc.devel.redhat.com" "/NICK fge"
-qdbus org.kde.konversation /irc org.kde.konversation.raw \
-    "irc.devel.redhat.com" "PRIVMSG chanserv :invite #ktd"
-qdbus org.kde.konversation /irc org.kde.konversation.raw \
-    "irc.devel.redhat.com" "JOIN #ktd"
+if [ "CHK$(echo $SRV_NAME|grep redhat)" != "CHK" ];then
+    qdbus org.kde.konversation /irc org.kde.konversation.raw \
+        "$SRV_NAME" "PRIVMSG userserv :login fge $PASSWD"
+    sleep 5
+    qdbus org.kde.konversation /irc org.kde.konversation.raw \
+        "$SRV_NAME" "PRIVMSG nickserv :regain fge"
+    qdbus org.kde.konversation /irc org.kde.konversation.raw \
+        "$SRV_NAME" "/NICK fge"
+    qdbus org.kde.konversation /irc org.kde.konversation.raw \
+        "$SRV_NAME" "PRIVMSG chanserv :invite #ktd"
+    qdbus org.kde.konversation /irc org.kde.konversation.raw \
+        "$SRV_NAME" "JOIN #ktd"
+fi
