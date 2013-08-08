@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash -x
 # uncomment this if you enabled synaptic in BIOS.
 #xinput set-int-prop "SynPS/2 Synaptics TouchPad" "Synaptics Off" 8 1
 #xinput set-int-prop "SynPS/2 Synaptics TouchPad" "Device Enabled" 8 0
+exit 1
 xinput set-int-prop "TPPS/2 IBM TrackPoint" \
     "Evdev Wheel Emulation" 8 1
 xinput set-int-prop "TPPS/2 IBM TrackPoint" \
