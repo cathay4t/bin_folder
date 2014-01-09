@@ -1,0 +1,8 @@
+#!/bin/bash
+
+LOG_FILE="/var/log/imap_rh.log"
+PASSWD_FILE="~/.passwd/.rh_passwd"
+COMMMAND="$HOME/bin/mbsync_read_pass RH $PASSWD_FILE"
+date >> $LOG_FILE
+$COMMMAND 1>>$LOG_FILE 2>&1 &
+disown
