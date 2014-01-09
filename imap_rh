@@ -1,5 +1,11 @@
 #!/bin/bash
 
+ifconfig tun0 1>/dev/null 2>/dev/null
+if [ $? -ne 0 ];then
+    logger -t $0 -i -- "INFO: mbsync cannot start withou VPN"
+    exit 0
+fi
+
 LOG_FILE="/var/log/imap_rh.log"
 PASSWD_FILE="~/.passwd/.rh_passwd"
 COMMMAND="$HOME/bin/mbsync_read_pass RH $PASSWD_FILE"
