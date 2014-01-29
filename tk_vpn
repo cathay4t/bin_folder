@@ -1,0 +1,73 @@
+#!/usr/bin/perl -w
+#Copyright (C) 2012  Gris Ge <cnfourt@gmail.com>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+use Expect;
+
+my $HOME = "$ENV{HOME}";
+my $tmo  = 10;
+my $vpnc_conf = $ARGV[0] if defined $ARGV[0];
+my $MAX_RETRY=1;
+my $token_cmd = "/home/fge/bin/pytoken";
+my $running_file = '/tmp/gris_tk_vpn'; # indicate tk_vpn is running
+
+sub main {
+    system("touch $running_file");
+    system('sudo vpnc-disconnect');
+    system('sudo killall vpnc');
+    my $exp = new Expect;
+    $exp->log_stdout(1);
+    my $command = 'sudo vpnc';
+    $command .= " $vpnc_conf" if defined $vpnc_conf;
+    unless ($exp->spawn($command)){
+        print "FAIL: Cannot spawn command $command\n";
+        return undef;
+    }
+    my $flag_retry = 0;
+    $exp->expect(
+        $tmo,
+        [
+            qr/Enter password/,
+            sub {
+                my $exp = shift;
+                exit 1 if $flag_retry >= $MAX_RETRY;
+                $flag_retry += 1;
+                my $token = `$token_cmd`;
+                my $pin  = `cat $HOME/.passwd/.rh_pin`;
+                chomp $pin;
+                chomp $token;
+                $exp->send("$pin$token\n");
+                exp_continue;
+            },
+        ],
+        [
+            qr/VPNC started in background/,
+            sub {
+                my $exp = shift;
+                $exp->expect(undef);
+            },
+        ],
+        [
+            timeout => sub {
+                print "FAIL: command $command timeout for expect checking\n";
+              }
+        ]
+    );
+    $exp->hard_close();
+}
+
+main();
+system("rm -rf $running_file");

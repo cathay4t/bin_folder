@@ -1,0 +1,19 @@
+#!/bin/bash
+
+CMD_RECONNECT="$HOME/bin/tk_vpn"
+POST_CMD="$HOME/bin/imap"
+TK_VPN_RUNNING="/tmp/gris_tk_vpn"
+
+if [ -f $TK_VPN_RUNNING ]; then
+    exit 0
+fi
+
+ping redhat.com -W 2 -c 1 1>/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+    logger -t $0 -i -- $USER : "Reconnecting VPN"
+    $CMD_RECONNECT
+    if [ "CHK$(ifconfig tun0 2>/dev/null)" != "CHK" ]; then
+        $POST_CMD
+        logger -t $0 -i -- $USER : "VPN connected"
+    fi
+fi
