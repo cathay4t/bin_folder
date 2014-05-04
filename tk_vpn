@@ -22,12 +22,15 @@ my $tmo  = 10;
 my $vpnc_conf = $ARGV[0] if defined $ARGV[0];
 my $MAX_RETRY=1;
 my $token_cmd = "/home/fge/bin/pytoken";
+my $pre_vpn_script="/home/fge/bin/pre_vpn";
+my $post_vpn_script="/home/fge/bin/post_vpn";
 my $running_file = '/tmp/gris_tk_vpn'; # indicate tk_vpn is running
 
 sub main {
     system("touch $running_file");
     system('sudo vpnc-disconnect');
     system('sudo killall vpnc');
+    system($pre_vpn_script);
     my $exp = new Expect;
     $exp->log_stdout(1);
     my $command = 'sudo vpnc';
@@ -71,3 +74,4 @@ sub main {
 
 main();
 system("rm -rf $running_file");
+system($post_vpn_script);

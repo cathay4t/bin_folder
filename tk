@@ -1,0 +1,5 @@
+#!/bin/bash
+
+TOKEN=`pytoken`
+echo -n $TOKEN | xclip -selection c
+echo $TOKEN

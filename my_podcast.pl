@@ -15,7 +15,10 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use strict;
+#use lib '/home/fge/MP3-PodcastFetch/lib/';
 use MP3::PodcastFetch;
+
+$| = 1;
 
 my @feeds = (
     +{
@@ -25,19 +28,19 @@ my @feeds = (
         max => 2,
         artist => 'BBC',
     },
-    +{
-        name => "Global News",
-        url  => "http://downloads.bbc.co.uk/"
-          . "podcasts/worldservice/globalnews/rss.xml",
-        max => 2,
-        artist => 'BBC',
-    },
-    +{
-        name => "In Our Times",
-        url  => "http://downloads.bbc.co.uk/podcasts/radio4/iot/rss.xml",
-        max => 2,
-        artist => 'BBC',
-    },
+#    +{
+#        name => "Global News",
+#        url  => "http://downloads.bbc.co.uk/"
+#          . "podcasts/worldservice/globalnews/rss.xml",
+#        max => 2,
+#        artist => 'BBC',
+#    },
+#    +{
+#        name => "In Our Times",
+#        url  => "http://downloads.bbc.co.uk/podcasts/radio4/iot/rss.xml",
+#        max => 2,
+#        artist => 'BBC',
+#    },
     +{
         name => "NBC Nightly News Audio",
         url  =>
@@ -45,13 +48,33 @@ my @feeds = (
         max => 2,
         artist => 'NBC',
     },
+#    +{
+#        name => "NBC Nightly News Video",
+#        url  =>
+#        "http://podcastfeeds.nbcnews.com/audio/podcast/MSNBC-NN-NETCAST-M4V.xml",
+#        max => 2,
+#        artist => 'NBC',
+#    },
+#    +{
+#        name => "CNET Updates",
+#        url  => "http://feeds.feedburner.com/CnetUpdateHD?format=xml",
+#        max => 5,
+#        artist => 'CNET',
+#    },
     +{
-        name => "NBC Nightly News Video",
-        url  =>
-        "http://podcastfeeds.nbcnews.com/audio/podcast/MSNBC-NN-NETCAST-M4V.xml",
+        name => "Joel Osteen Audio",
+        url  => "http://www.joelosteen.com/_layouts/JOMHelper.asmx/"
+              . "GetPodcastAudio",
         max => 2,
-        artist => 'NBC',
+        artist => 'Joel Osteen',
     },
+#    +{
+#        name => "Joel Osteen Video",
+#        url  => "http://www.joelosteen.com/_layouts/JOMHelper.asmx/"
+#              . "GetPodcastVideo",
+#        max => 1,
+#        artist => 'Joel Osteen',
+#    },
 );
 
 my $st_folder = "/home/fge/Music/podcasts";
