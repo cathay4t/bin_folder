@@ -37,7 +37,7 @@ sub main {
     my $group = $ARGV[0];
     my $passwd_file = $ARGV[1];
     my $conflict_file = "/tmp/imap_$group";
-    my $is_running = `ps -ef|grep 'mbsync RH' |grep -v 'grep'`;
+    my $is_running = `ps -ef|grep 'mbsync $group' |grep -v 'grep'`;
     if ( -e $conflict_file and $is_running){
         syslog "INFO: Another thread of mbsync is running for $group group";
         exit 0;
