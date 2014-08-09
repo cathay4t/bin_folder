@@ -28,8 +28,10 @@ cat /tmp/key | xxd -ps
 # perfrom 'resync' on OTP server
 rm -f /tmp/key
 '''
-
-home='/home/fge'
-base32_str_fd= open(home + '/.passwd/.token', 'r');
-base32_str= base32_str_fd.read().rstrip('\n');
-print "%06d" % pyotp.TOTP(base32_str).now();
+import sys
+if len(sys.argv) != 1:
+    base32_str_fd= open(sys.argv[1], 'r')
+else:
+    base32_str_fd= open("/home/fge/.passwd/.token", 'r')
+base32_str= base32_str_fd.read().rstrip('\n')
+print "%06d" % pyotp.TOTP(base32_str).now()
