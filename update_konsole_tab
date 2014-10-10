@@ -6,16 +6,18 @@ fi
 
 OLD_FORMAT="%n"
 QDBUS_COMMAND="qdbus org.kde.konsole $KONSOLE_DBUS_SESSION"
+TITLE_ROLE=1
 
 if [ "CHK$1" == "CHKset" ];then
-    $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat 0 '' \
+    $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat $TITLE_ROLE '' \
         1>/dev/null 2>/dev/null
-    $QDBUS_COMMAND org.kde.konsole.Session.setTitle 0 "$2" \
+    $QDBUS_COMMAND org.kde.konsole.Session.setTitle $TITLE_ROLE "$2" \
         1>/dev/null 2>/dev/null
 fi
 
 if [ "CHK$1" == "CHKclean" ];then
-    $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat 0 '%n' \
+    $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat \
+        $TITLE_ROLE '%n' \
         1>/dev/null 2>/dev/null
 fi
 

@@ -16,7 +16,7 @@
 
 use strict;
 
-my @SKIP_NICS = qw/lo tun0 vboxnet0/;
+my @SKIP_NICS = qw/lo vboxnet0/;
 
 sub main() {
     my $time_interval = 1;

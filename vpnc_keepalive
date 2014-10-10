@@ -8,7 +8,7 @@ if [ -f $TK_VPN_RUNNING ]; then
     exit 0
 fi
 
-ping redhat.com -W 5 -c 1 1>/dev/null 2>/dev/null
+ping mail.corp.redhat.com -W 5 -c 1 1>/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
     logger -t $0 -i -- $USER : "Reconnecting VPN"
     $CMD_RECONNECT
