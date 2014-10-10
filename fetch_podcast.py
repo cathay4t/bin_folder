@@ -61,12 +61,23 @@ pod_list = [
                "/audio/podcast/MSNBC-MTP-NETCAST-M4V.xml",
         'max_count': 5,
     },
-
+    {
+        'folder': "TED Video HD",
+        'url': "http://feeds.feedburner.com/TedtalksHD?format=xml",
+        'max_count': 5,
+    },
+    {
+        'folder': "TED Audio",
+        'url': "http://feeds.feedburner.com/tedtalks_audio",
+        'max_count': 5,
+    },
 ]
 
 _CTRL_C_ERROR_CODE=2
 _TMP_EXTENTION='.tmp'
 _DL_CMD='wget --continue '
+_AUDIO_FILE_EXTENTION='.mp3'
+_VIDEO_FILE_EXTENTION='.mp4'
 
 def signal_handler(signal, frame):
     print
@@ -74,11 +85,11 @@ def signal_handler(signal, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def download_url(url, file_name, folder, time_stamp):
+def download_url(url, file_name, folder, time_stamp, file_ext):
     if not os.path.isdir(folder):
         os.system("mkdir -p '%s'" % folder)
     file_name += "_%s" % time_stamp
-    file_name += os.path.splitext(url)[1]
+    file_name += file_ext
     file_path = "%s/%s" % (folder, file_name)
     if os.path.exists(file_path):
         return None
@@ -136,18 +147,22 @@ for pod in pod_list:
         file_name = re.sub('[^a-zA-Z0-9_]', '', file_name)
         file_name = re.sub('_+$', '', file_name)
         time_stamp = time_stamp_of_pod_entry(pod_entry)
+        file_ext = None
         for pod_link in pod_entry['links']:
             url = pod_link['href']
 
             if pod_link['type'][0:5].lower()  == 'audio':
                 folder_name = "%s/%s" %(_AUDIO_PODCAST_FOLDER, pod['folder'])
+                file_ext = _AUDIO_FILE_EXTENTION
             elif pod_link['type'][0:5].lower()  == 'video':
                 folder_name = "%s/%s" %(_VIDEO_PODCAST_FOLDER, pod['folder'])
+                file_ext = _VIDEO_FILE_EXTENTION
             else:
                 continue
 
             pod_file_path = download_url(
-                pod_link['href'], file_name, folder_name, time_stamp)
+                pod_link['href'], file_name, folder_name, time_stamp,
+                file_ext)
             counter += 1
             if pod_file_path:
                 downloaded_file_paths.append(pod_file_path)
