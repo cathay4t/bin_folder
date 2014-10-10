@@ -77,7 +77,7 @@ _CTRL_C_ERROR_CODE=2
 _TMP_EXTENTION='.tmp'
 _DL_CMD='wget --continue '
 _AUDIO_FILE_EXTENTION='.mp3'
-_VIDEO_FILE_EXTENTION='.mp4'
+_VIDEO_FILE_EXTENTION='.m4v'
 
 def signal_handler(signal, frame):
     print
