@@ -53,7 +53,7 @@ pod_list = [
         'folder': "NBC_Nightly_News_Audio",
         'url': "http://podcastfeeds.nbcnews.com" +
                "/audio/podcast/MSNBC-Nightly.xml",
-        'max_count': 5,
+        'max_count': 2,
     },
     {
         'folder': "NBC_Meet_The_Press_Video",
@@ -153,7 +153,8 @@ for pod in pod_list:
                 downloaded_file_paths.append(pod_file_path)
                 break
 
-    print "INFO: Downloaded %d new podcast" % len(downloaded_file_paths)
+    print "INFO: Downloaded %d new podcast for '%s'" % \
+        (len(downloaded_file_paths), pod['folder'])
     if downloaded_file_paths:
         print "\n".join(downloaded_file_paths)
         # Remove old podcast files.
