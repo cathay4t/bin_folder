@@ -35,7 +35,7 @@ pod_list = [
         'folder': "Drama_of_the_Week",
         'url': "http://downloads.bbc.co.uk/podcasts/" +
                "radio4/radioplay/rss.xml",
-        'max_count': 5,
+        'max_count': 2,
     },
     {
         'folder': "Joel_Osteen_Video",
@@ -47,7 +47,7 @@ pod_list = [
         'folder': "NBC_Nightly_News_Video",
         'url': "http://podcastfeeds.nbcnews.com" +
                "/audio/podcast/MSNBC-NN-NETCAST-M4V.xml",
-        'max_count': 5,
+        'max_count': 1,
     },
     {
         'folder': "NBC_Nightly_News_Audio",
@@ -59,17 +59,17 @@ pod_list = [
         'folder': "NBC_Meet_The_Press_Video",
         'url': "http://podcastfeeds.nbcnews.com" +
                "/audio/podcast/MSNBC-MTP-NETCAST-M4V.xml",
-        'max_count': 5,
+        'max_count': 1,
     },
     {
-        'folder': "TED Video HD",
+        'folder': "TED_Video_HD",
         'url': "http://feeds.feedburner.com/TedtalksHD?format=xml",
-        'max_count': 5,
+        'max_count': 1,
     },
     {
-        'folder': "TED Audio",
+        'folder': "TED_Audio",
         'url': "http://feeds.feedburner.com/tedtalks_audio",
-        'max_count': 5,
+        'max_count': 2,
     },
 ]
 
@@ -173,4 +173,9 @@ for pod in pod_list:
     if downloaded_file_paths:
         print "\n".join(downloaded_file_paths)
         # Remove old podcast files.
+    if folder_name is None:
+        print "FAIL: Failed to parse podcast of '%s'" % pod['folder']
+        print parser.items()
+        continue
+
     remove_old_pod(folder_name, pod['max_count'])
