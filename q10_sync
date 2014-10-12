@@ -1,0 +1,39 @@
+#!/bin/bash -x
+
+PODCAST_PATH="$HOME/Podcast";
+Q10_ADDR="kyly-q10"
+Q10_SHARE='media'
+Q10_MOUNT_POINT="/tmp/q10_mount"
+Q10_USERNAME='kyly'
+Q10_PASS=`cat ~/.passwd/q10_share.pass`
+SYNC_FILE='/tmp/q10_syncing'
+
+if [ "CHK$(/sbin/ifconfig |grep "172.17")" != "CHK" ]; then
+
+    if [ ! -d $Q10_MOUNT_POINT ];then
+        mkdir $Q10_MOUNT_POINT
+    fi
+
+    if [ -e $SYNC_FILE ];then
+        exit
+    fi
+
+    touch $SYNC_FILE
+
+    sudo mount -t cifs //$Q10_ADDR/$Q10_SHARE $Q10_MOUNT_POINT \
+        -o user=kyly,password=$Q10_PASS,uid=1000,gid=1000
+    if [ $? -ne 0 ];then
+        # Silently quit
+        rm $SYNC_FILE
+        exit
+    fi
+
+    rsync --recursive --modify-window=1 --delete  \
+        ${PODCAST_PATH} $Q10_MOUNT_POINT/music/ -v
+    sudo umount $Q10_MOUNT_POINT/
+    if [ $? -ne 0 ];then
+        sleep 10
+        sudo umount $Q10_MOUNT_POINT/
+    fi
+    rm $SYNC_FILE
+fi
