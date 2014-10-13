@@ -121,7 +121,8 @@ def main():
     # root message and search again.
     if len(got_messages) == 1:
         root_message_id = root_message['References']
-        got_messages = search_message_by_id(all_messages, root_message_id)
+        if root_message_id:
+            got_messages = search_message_by_id(all_messages, root_message_id)
 
     got_messages = sorted(got_messages, key=lambda msg: msg['Subject'])
 
