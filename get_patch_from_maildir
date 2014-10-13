@@ -18,6 +18,7 @@ import sys
 import mailbox
 import os
 import re
+import argparse
 
 def reference_ids_of_message(message):
     if message['References']:
@@ -34,13 +35,20 @@ def subject_of_message(message):
     return subject
 
 def subject_to_filename(subject):
-    regex_subject = re.compile(".*([0-9]+)/[0-9]+\] (.+)$")
+    regex_subject = re.compile(".* ([0-9]+)/[0-9]+\] (.+)$")
     match = regex_subject.match(subject)
     patch_number = None
     patch_name = None
     if match:
         patch_number = int(match.group(1))
         patch_name = match.group(2)
+    elif '[PATCH]' in subject:
+        # It might a single patch.
+        patch_number = 1
+        patch_name = re.sub('.+\[PATCH\] ', '', subject)
+    else:
+        raise Exception(
+            "Failed to do regex parse again 'subject' %s" % subject)
 
     patch_name = re.sub('[^a-zA-Z0-9\._ ]', '', patch_name)
     patch_name = re.sub(' +', '-', patch_name)
@@ -60,39 +68,59 @@ def save_to_file(message):
     print file_name
 
 def main():
-    if len(sys.argv) != 3:
-        print "FAIL: Please specific maildir folder as $1.\n" + \
-              "      and patch email subject name as $2"
+    parser = argparse.ArgumentParser(description='Extract patch from maildir')
+
+    parser.add_argument('--maildir', dest='maildir', action='store',
+                        required=True,
+                        help='Path to the folder of maildir')
+    parser.add_argument('--subject', dest='subject', action='store',
+                        help='Subject of email for first patch')
+    parser.add_argument('--msg-id', dest='msg_id', action='store',
+                        help='Message ID of first patch')
+
+    cmd_opt = parser.parse_args(sys.argv[1:])
+
+    if not cmd_opt.msg_id and not cmd_opt.subject:
+        print "FAIL: You need to specify --msg-id or --subject"
+        cmd_opt.print_help()
         exit(1)
 
-    maildir_path = sys.argv[1]
-    search_subject = sys.argv[2]
+    if cmd_opt.msg_id and cmd_opt.subject:
+        print "FAIL: --msg-id is conflict with --subject, just keep one"
+        parser.print_help()
+        exit(1)
+
+    maildir_path = cmd_opt.maildir
 
     md_obj = mailbox.Maildir(maildir_path, factory=None, create=False)
 
     root_message_id = None
     got_messages = []
 
-    # First loop, we search for root message id on provided subject.
+    if cmd_opt.msg_id:
+        root_message_id = cmd_opt.msg_id
+        if not re.search('\@', root_message_id):
+            print "FAIL: Got invalid message id defined in --msg-id"
+            exit(1)
+    else:
+        for message in md_obj.values():
+            cur_subject = subject_of_message(message)
+
+            if not re.match('^\[', cur_subject):
+                continue
+
+            if cmd_opt.subject in cur_subject:
+                root_message_id = message['Message-Id']
+                break
+
     for message in md_obj.values():
         cur_subject = subject_of_message(message)
 
         if not re.match('^\[', cur_subject):
             continue
 
-        if root_message_id is None:
-            if search_subject in cur_subject:
-                root_message_id = message['Message-Id']
-                got_messages.append(message)
-                break
-
-    # Second loop, we search reference id.
-    # Merging two loops will cause some patch skip as they were listed ahead
-    # of the root email.
-    for message in md_obj.values():
-        cur_subject = subject_of_message(message)
-
-        if not re.match('^\[', cur_subject):
+        if root_message_id == message['Message-Id']:
+            got_messages.append(message)
             continue
 
         if root_message_id in reference_ids_of_message(message):
