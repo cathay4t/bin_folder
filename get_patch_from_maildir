@@ -18,7 +18,6 @@ import sys
 import mailbox
 import os
 import re
-import argparse
 
 def reference_ids_of_message(message):
     if message['References']:
@@ -67,65 +66,62 @@ def save_to_file(message):
     fd.close()
     print file_name
 
-def main():
-    parser = argparse.ArgumentParser(description='Extract patch from maildir')
-
-    parser.add_argument('--maildir', dest='maildir', action='store',
-                        required=True,
-                        help='Path to the folder of maildir')
-    parser.add_argument('--subject', dest='subject', action='store',
-                        help='Subject of email for first patch')
-    parser.add_argument('--msg-id', dest='msg_id', action='store',
-                        help='Message ID of first patch')
-
-    cmd_opt = parser.parse_args(sys.argv[1:])
-
-    if not cmd_opt.msg_id and not cmd_opt.subject:
-        print "FAIL: You need to specify --msg-id or --subject"
-        cmd_opt.print_help()
-        exit(1)
-
-    if cmd_opt.msg_id and cmd_opt.subject:
-        print "FAIL: --msg-id is conflict with --subject, just keep one"
-        parser.print_help()
-        exit(1)
-
-    maildir_path = cmd_opt.maildir
-
-    md_obj = mailbox.Maildir(maildir_path, factory=None, create=False)
-
-    root_message_id = None
-    got_messages = []
-
-    if cmd_opt.msg_id:
-        root_message_id = cmd_opt.msg_id
-        if not re.search('\@', root_message_id):
-            print "FAIL: Got invalid message id defined in --msg-id"
-            exit(1)
-    else:
-        for message in md_obj.values():
-            cur_subject = subject_of_message(message)
-
-            if not re.match('^\[', cur_subject):
-                continue
-
-            if cmd_opt.subject in cur_subject:
-                root_message_id = message['Message-Id']
-                break
-
-    for message in md_obj.values():
+def search_message_by_id(messages, root_message_id):
+    rc = []
+    for message in messages:
         cur_subject = subject_of_message(message)
 
         if not re.match('^\[', cur_subject):
             continue
 
         if root_message_id == message['Message-Id']:
-            got_messages.append(message)
+            rc.append(message)
             continue
 
         if root_message_id in reference_ids_of_message(message):
-            got_messages.append(message)
+            rc.append(message)
             continue
+    return rc
+
+def main():
+    if len(sys.argv) != 3:
+        print "FAIL: Please specific maildir folder as $1.\n" + \
+              "      and patch email subject name as $2"
+
+    maildir_path = sys.argv[1]
+    search_subject = sys.argv[2]
+
+    md_obj = mailbox.Maildir(maildir_path, factory=None, create=False)
+
+    root_message_id = None
+    root_message = None
+    got_messages = []
+    all_messages = md_obj.values()
+
+    for message in all_messages:
+        cur_subject = subject_of_message(message)
+
+        if not re.match('^\[', cur_subject):
+            continue
+
+        if search_subject in cur_subject:
+            root_message_id = message['Message-Id']
+            root_message = message
+            break
+
+    if root_message_id is None:
+        print "FAIL: Failed to found the message id of provides subject"
+        exit(1)
+
+    got_messages = search_message_by_id(all_messages, root_message_id)
+
+    # Workaround for RHEL6 git which chain-reply will put all patches
+    # in reply to provides message id.
+    # In that case, we should use the reference id of root message as
+    # root message and search again.
+    if len(got_messages) == 1:
+        root_message_id = root_message['References']
+        got_messages = search_message_by_id(all_messages, root_message_id)
 
     got_messages = sorted(got_messages, key=lambda msg: msg['Subject'])
 
