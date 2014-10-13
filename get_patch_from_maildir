@@ -1,0 +1,107 @@
+#!/usr/bin/python2
+#Copyright (C) 2014  Gris Ge <cnfourt@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import mailbox
+import os
+import re
+
+def reference_ids_of_message(message):
+    if message['References']:
+        return re.split('[\n\t]+', message['References'])
+    else:
+        return []
+
+def subject_of_message(message):
+    # Subject might have \n \t, we replace them as one space.
+    # http://www.w3.org/Protocols/rfc822/3_Lexical.html#z1
+    subject = message['Subject'].replace('\n\t', ' ')
+    subject = subject.replace('\n', ' ')
+    subject = subject.replace('\t', ' ')
+    return subject
+
+def subject_to_filename(subject):
+    regex_subject = re.compile(".*([0-9]+)/[0-9]+\] (.+)$")
+    match = regex_subject.match(subject)
+    patch_number = None
+    patch_name = None
+    if match:
+        patch_number = int(match.group(1))
+        patch_name = match.group(2)
+
+    patch_name = re.sub('[^a-zA-Z0-9\._ ]', '', patch_name)
+    patch_name = re.sub(' +', '-', patch_name)
+
+    return "%04d-%s.patch" % (patch_number, patch_name)
+
+def save_to_file(message):
+    """
+    Save a email to file named as 000x-xxxxxx.patch
+    """
+    subject = subject_of_message(message)
+    file_name = subject_to_filename(subject)
+    fd = open(file_name, 'w')
+    # If prorblem found, switch to email.generator.Generator.flatten()
+    fd.write(message.as_string())
+    fd.close()
+    print file_name
+
+def main():
+    if len(sys.argv) != 3:
+        print "FAIL: Please specific maildir folder as $1.\n" + \
+              "      and patch email subject name as $2"
+        exit(1)
+
+    maildir_path = sys.argv[1]
+    search_subject = sys.argv[2]
+
+    md_obj = mailbox.Maildir(maildir_path, factory=None, create=False)
+
+    root_message_id = None
+    got_messages = []
+
+    # First loop, we search for root message id on provided subject.
+    for message in md_obj.values():
+        cur_subject = subject_of_message(message)
+
+        if not re.match('^\[', cur_subject):
+            continue
+
+        if root_message_id is None:
+            if search_subject in cur_subject:
+                root_message_id = message['Message-Id']
+                got_messages.append(message)
+                break
+
+    # Second loop, we search reference id.
+    # Merging two loops will cause some patch skip as they were listed ahead
+    # of the root email.
+    for message in md_obj.values():
+        cur_subject = subject_of_message(message)
+
+        if not re.match('^\[', cur_subject):
+            continue
+
+        if root_message_id in reference_ids_of_message(message):
+            got_messages.append(message)
+            continue
+
+    got_messages = sorted(got_messages, key=lambda msg: msg['Subject'])
+
+    for message in got_messages:
+        save_to_file(message)
+
+main()
