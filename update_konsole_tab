@@ -4,20 +4,17 @@ if [ "CHK$KONSOLE_DBUS_SESSION" == "CHK" ];then
     exit 0
 fi
 
-OLD_FORMAT="%n"
+OLD_FORMAT="%d : %n"
 QDBUS_COMMAND="qdbus org.kde.konsole $KONSOLE_DBUS_SESSION"
-TITLE_ROLE=1
+TITLE_ROLE=0
 
 if [ "CHK$1" == "CHKset" ];then
-    $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat $TITLE_ROLE '' \
-        1>/dev/null 2>/dev/null
-    $QDBUS_COMMAND org.kde.konsole.Session.setTitle $TITLE_ROLE "$2" \
-        1>/dev/null 2>/dev/null
+    $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat \
+        $TITLE_ROLE "$2" 1>/dev/null 2>/dev/null
 fi
 
 if [ "CHK$1" == "CHKclean" ];then
     $QDBUS_COMMAND org.kde.konsole.Session.setTabTitleFormat \
-        $TITLE_ROLE '%n' \
-        1>/dev/null 2>/dev/null
+        $TITLE_ROLE "$OLD_FORMAT" 1>/dev/null 2>/dev/null
 fi
 
