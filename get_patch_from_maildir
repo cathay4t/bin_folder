@@ -52,7 +52,7 @@ def subject_to_filename(subject):
     patch_name = re.sub('[^a-zA-Z0-9\._ ]', '', patch_name)
     patch_name = re.sub(' +', '-', patch_name)
 
-    return "%04d-%s.patch" % (patch_number, patch_name)
+    return "%04d-%s.patch" % (patch_number, patch_name[:52])
 
 def save_to_file(message):
     """
