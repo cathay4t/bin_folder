@@ -1,0 +1,225 @@
+#!/usr/bin/python2
+# -*- encoding: utf-8 -*-
+# Copyright (C) 2014 Gris Ge
+#
+# This program is free sofare: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Sofare Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# Author: Gris Ge <cnfourt@gmail.com>
+
+
+## To use this script, you have to create /etc/yyest.conf (json format) like
+## this:
+"""
+{
+    "USRNAME": "username",
+    "PASS": "password",
+    "ED2K_DL_COMMAND": "lixian download",
+    "TIMEOUT": 10,
+    "MONITOR_LIST": [
+        {
+            "name": "The_Good_Wife",
+            "resource_id": "11029",
+            "dl_type": "HR-HDTV"
+        },
+        {
+            "name": "POI",
+            "resource_id": "11009",
+            "dl_type": "720P"
+        },
+        {
+            "name": "Madam_Secretary",
+            "resource_id": "32775",
+            "dl_type": "720P"
+        },
+        {
+            "name": "Star_Wars_Rebels",
+            "resource_id": "32714",
+            "dl_type": "720P"
+        }
+    ]
+}
+"""
+
+import os
+import json
+import requests
+import subprocess
+from HTMLParser import HTMLParser
+
+
+_USR_CONF_FILE = '/etc/yyets.conf'
+_COOKIE_TMP_FILE = '/tmp/yyets.cookie'
+
+_YYETS_HOSTNAME = 'www.yyets.com'
+_LOGIN_URL = 'http://%s/user/login/ajaxLogin' % _YYETS_HOSTNAME
+_COOKIE_TEST_URL = 'http://%s/php/user/fav' % _YYETS_HOSTNAME
+
+_TERM_COLOR_RED = '\033[91m'
+_TERM_COLOR_END = '\033[0m'
+_TMO = 10
+
+
+class YyetsEpisode(object):
+    def __init__(self, season, episode, dl_type,
+                 ed2k_link):
+        self.season = season
+        self.episode = episode
+        self.dl_type = dl_type
+        self.ed2k_link = ed2k_link
+
+
+# create a subclass and override the handler methods
+class MyHTMLParser(HTMLParser):
+    def my_init(self):
+        self.flag_begin = False
+        self.cur_season = None
+        self.cur_episode = None
+        self.cur_dl_type = None
+        self.cur_ed2k_link = None
+        self.yy_eps = []
+        self._tmp_link = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag != 'ul' and not self.flag_begin:
+            return
+
+        attrs = dict(attrs)
+        if tag == 'ul' and 'season' in attrs.keys():
+            self.flag_begin = True
+            self.cur_season = int(attrs['season'])
+            self.cur_episode = None
+            self.cur_dl_type = None
+        if self.flag_begin:
+            if tag == 'li':
+                self.cur_episode = int(attrs['episode'])
+                self.cur_dl_type = attrs['format']
+                self.cur_ed2k_link = None
+            elif (tag == 'a' and 'href' in attrs.keys() and
+                  'type' in attrs.keys() and attrs['type'] == 'ed2k'):
+                self.cur_ed2k_link = attrs['href']
+            elif tag == 'a' and 'href' in attrs.keys():
+                self._tmp_link = attrs['href']
+
+    def handle_endtag(self, tag):
+        if not self.flag_begin:
+            return
+        if tag == 'ul':
+            self.flag_begin = False
+        elif tag == 'li':
+            self.yy_eps.extend([
+                YyetsEpisode(self.cur_season,
+                             self.cur_episode,
+                             self.cur_dl_type,
+                             self.cur_ed2k_link)])
+        elif tag == 'a':
+            self._tmp_link = None
+
+
+def find_the_latest(yy_eps, dl_type):
+    lastest_ep = None
+    for yy_ep in yy_eps:
+        if yy_ep.dl_type != dl_type:
+            continue
+        if lastest_ep is None:
+            lastest_ep = yy_ep
+            continue
+        elif yy_ep.season > lastest_ep.season:
+            lastest_ep = yy_ep
+            continue
+        elif (yy_ep.season == lastest_ep.season and
+              yy_ep.episode > lastest_ep.episode):
+            lastest_ep = yy_ep
+            continue
+    return lastest_ep
+
+
+def login_yyets(web_session, username, password):
+    print "INFO: Logging in"
+    login_req = web_session.post(_LOGIN_URL, data={
+        'type': 'nickname',
+        'account': username,
+        'password': password,
+        'remember': 1}, timeout=_TMO)
+
+    if login_req.json()['status'] != 1:
+        print "FAIL: Login Failed with: '%s'" % \
+            login_req.json()['info'].encode('utf-8')
+        exit(1)
+
+
+def write_cookie_file(cookies, cookie_file_path):
+    with open(cookie_file_path, 'w') as f:
+        json.dump(requests.utils.dict_from_cookiejar(cookies), f)
+
+
+def load_cookie_file(web_session, cookie_file_path):
+    print "INFO: Loading cookie"
+    with open(cookie_file_path) as f:
+        cookies = requests.utils.cookiejar_from_dict(
+            json.load(f))
+        web_session.cookies = cookies
+
+
+def test_cookie_for_login(web_session):
+    r = web_session.get(_COOKIE_TEST_URL, timeout=_TMO)
+    if r.url != _COOKIE_TEST_URL:
+        print "INFO: Cookie expired"
+        return False
+    return True
+
+
+def main():
+    user_conf = None
+    with open(_USR_CONF_FILE, 'r') as f:
+        user_conf = json.load(f)
+    if user_conf is None:
+        print "FAIL: Failed to load user configuration from %s" % \
+            _USR_CONF_FILE
+        exit(1)
+    global _TMO
+    _TMO = user_conf['TIMEOUT']
+    web_session = requests.Session()
+    if os.path.isfile(_COOKIE_TMP_FILE):
+        load_cookie_file(web_session, _COOKIE_TMP_FILE)
+        if not test_cookie_for_login(web_session):
+            login_yyets(web_session, user_conf['USRNAME'], user_conf['PASS'])
+            write_cookie_file(web_session.cookies, _COOKIE_TMP_FILE)
+        else:
+            print "INFO: Cookie loaded and verified"
+    else:
+        login_yyets(web_session, user_conf['USRNAME'], user_conf['PASS'])
+        write_cookie_file(web_session.cookies, _COOKIE_TMP_FILE)
+
+    for monitor in user_conf['MONITOR_LIST']:
+        print "INFO: Checking %s'%s'%s for latest episode" % \
+            (_TERM_COLOR_RED, monitor['name'], _TERM_COLOR_END)
+        resource_id = monitor['resource_id']
+        dl_type = monitor['dl_type']
+        url = "http://%s/resource/%s" % (_YYETS_HOSTNAME, resource_id)
+        print "INFO: Visiting webpage %s" % url
+        html_data = web_session.get(url, timeout=_TMO).text
+
+        # instantiate the parser and fed it some HTML
+        parser = MyHTMLParser()
+        parser.my_init()
+        parser.feed(html_data)
+
+        lastest_ep = find_the_latest(parser.yy_eps, dl_type)
+        print "INFO: Lastest episode of %s'%s'%s is %sS%02dE%02d%s" % \
+            (_TERM_COLOR_RED, monitor['name'], _TERM_COLOR_END,
+             _TERM_COLOR_RED, lastest_ep.season, lastest_ep.episode,
+             _TERM_COLOR_END)
+        subprocess.call([user_conf['ED2K_DL_COMMAND'], lastest_ep.ed2k_link])
+
+main()
