@@ -41,15 +41,15 @@ def subject_to_filename(subject):
     if match:
         patch_number = int(match.group(1))
         patch_name = match.group(2)
-    elif '[PATCH]' in subject:
+    elif 'PATCH' in subject:
         # It might a single patch.
         patch_number = 1
-        patch_name = re.sub('.+\[PATCH\] ', '', subject)
+        patch_name = re.sub('.+\[PATCH.*\] ', '', subject)
     else:
         raise Exception(
             "Failed to do regex parse again 'subject' %s" % subject)
 
-    patch_name = re.sub('[^a-zA-Z0-9\._ ]', '', patch_name)
+    patch_name = re.sub('[^a-zA-Z0-9_ ]', '', patch_name)
     patch_name = re.sub(' +', '-', patch_name)
 
     return "%04d-%s.patch" % (patch_number, patch_name[:52])
@@ -71,7 +71,7 @@ def search_message_by_id(messages, root_message_id):
     for message in messages:
         cur_subject = subject_of_message(message)
 
-        if not re.match('^\[', cur_subject):
+        if not is_patch_email(cur_subject):
             continue
 
         if root_message_id == message['Message-Id']:
@@ -82,6 +82,15 @@ def search_message_by_id(messages, root_message_id):
             rc.append(message)
             continue
     return rc
+
+def is_patch_email(subject):
+    if not re.match('^\[', subject):
+        return False
+
+    if not re.search('\][ \t]+\[PATCH', subject):
+        return False
+
+    return True
 
 def main():
     if len(sys.argv) != 3:
@@ -101,7 +110,7 @@ def main():
     for message in all_messages:
         cur_subject = subject_of_message(message)
 
-        if not re.match('^\[', cur_subject):
+        if not is_patch_email(cur_subject):
             continue
 
         if search_subject in cur_subject:
