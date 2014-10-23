@@ -75,6 +75,7 @@ sub main {
     my $return_code = $exp->exitstatus();
     if ($return_code == 0){
         syslog "INFO: Mailbox of $group syncronization finished";
+        print "INFO: Mailbox of $group syncronization finished";
     }else{
         notify "FAIL: Command '$command' exit with error $return_code";
     }
