@@ -25,6 +25,8 @@
     "USRNAME": "username",
     "PASS": "password",
     "ED2K_DL_COMMAND": "lixian download",
+    "OUTPUT_FILE_NAME_OPTION": "-o",
+    "DOWNLOAD_FOLDER": "/home/fge/Downloads/",
     "TIMEOUT": 10,
     "MONITOR_LIST": [
         {
@@ -179,6 +181,25 @@ def test_cookie_for_login(web_session):
     return True
 
 
+def gen_file_name(name, yy_ep):
+    return "%s-S%02dE%02d-%s.mkv" % (
+        name, yy_ep.season, yy_ep.episode, yy_ep.dl_type)
+
+
+def remove_old_file(folder, name, yy_ep):
+    file_list = os.listdir(folder)
+    for file_name in file_list:
+        if os.path.isfile("%s/%s" % (folder, file_name)):
+            if file_name[:len(name)] == name:
+                if file_name < gen_file_name(name, yy_ep):
+                    print "INFO: Remove old file %s" % file_name
+                    os.unlink("%s/%s" % (folder, file_name))
+    return
+
+def download_url(cmd, url, file_option, folder, name, yy_ep):
+    file_path = "%s/%s" % (folder, gen_file_name(name, yy_ep))
+    subprocess.call([cmd, url, file_option, file_path])
+
 def main():
     user_conf = None
     with open(_USR_CONF_FILE, 'r') as f:
@@ -220,6 +241,12 @@ def main():
             (_TERM_COLOR_RED, monitor['name'], _TERM_COLOR_END,
              _TERM_COLOR_RED, lastest_ep.season, lastest_ep.episode,
              _TERM_COLOR_END)
-        subprocess.call([user_conf['ED2K_DL_COMMAND'], lastest_ep.ed2k_link])
+        remove_old_file(
+            user_conf['DOWNLOAD_FOLDER'], monitor['name'], lastest_ep)
+
+        download_url(
+            user_conf['ED2K_DL_COMMAND'], lastest_ep.ed2k_link,
+            user_conf['OUTPUT_FILE_NAME_OPTION'],
+            user_conf['DOWNLOAD_FOLDER'], monitor['name'], lastest_ep)
 
 main()
