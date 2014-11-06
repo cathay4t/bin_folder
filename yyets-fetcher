@@ -71,6 +71,7 @@ _TERM_COLOR_RED = '\033[91m'
 _TERM_COLOR_END = '\033[0m'
 _TMO = 10
 
+_YYETS_CUSTOM_SEASON_NUMBER_BEGIN=100
 
 class YyetsEpisode(object):
     def __init__(self, season, episode, dl_type,
@@ -131,6 +132,10 @@ class MyHTMLParser(HTMLParser):
 def find_the_latest(yy_eps, dl_type):
     lastest_ep = None
     for yy_ep in yy_eps:
+        if yy_ep.ed2k_link is None:
+            continue
+        if yy_ep.season >= _YYETS_CUSTOM_SEASON_NUMBER_BEGIN:
+            continue
         if yy_ep.dl_type != dl_type:
             continue
         if lastest_ep is None:
@@ -237,6 +242,9 @@ def main():
         parser.feed(html_data)
 
         lastest_ep = find_the_latest(parser.yy_eps, dl_type)
+        if lastest_ep.ed2k_link is None:
+            print "FAIL: Failed to get ed2k link"
+            continue
         print "INFO: Lastest episode of %s'%s'%s is %sS%02dE%02d%s" % \
             (_TERM_COLOR_RED, monitor['name'], _TERM_COLOR_END,
              _TERM_COLOR_RED, lastest_ep.season, lastest_ep.episode,
