@@ -1,5 +1,7 @@
 #!/bin/bash
 
 TOKEN=`pytoken`
-echo -n $TOKEN | xclip -selection c
+if [ "CHK${DISPLAY}" != "CHK" ];then
+    echo -n $TOKEN | xclip -selection c
+fi
 echo $TOKEN
