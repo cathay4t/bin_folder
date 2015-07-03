@@ -21,7 +21,7 @@ my @file_ext_lists = ( 'avi', 'rm', 'rmvb', 'mkv','mp4', 'part','wmv');
 
 sub call_smp($){
     my $file_path = shift;
-    system("smplayer \"$file_path\"");
+    system("env DISPLAY=:0 smplayer -fullscreen -close-at-end \"$file_path\"");
 }
 
 sub find_latest_movie($){
