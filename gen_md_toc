@@ -18,42 +18,50 @@ use strict;
 
 my @links;
 my %title_level_hash;
+my $regex_appendix = qr/
+    Appendix\.([A-Z])(?:\.){0,1}
+        (?:\.([0-9]+)){0,1}
+        (?:\.([0-9]+)){0,1}\ .+
+/x;
 
-while(<>){
-    if (m|<h([0-9]+) id="([^"]+)">(.+)</h|){
+while (<>) {
+    if (m|<h([0-9]+) id="([^"]+)">(.+)</h|) {
         my $level = $1;
         next if $level < 2;
 
-        my $link = $2;
+        my $link  = $2;
         my $title = $3;
         $title =~ s|<[/]*code>|`|g;
         my $link_number = '';
-        while($title =~ m/([0-9]+)\./g){
-            $link_number .= sprintf("%02d", $1);
+        if ( $title =~ /^[0-9]/ ) {
+            while ( $title =~ m/([0-9]+)\./g ) {
+                $link_number .= sprintf( "%02d", $1 );
+            }
         }
-        if($link_number eq ''){
-            if ($title =~ /Appendix\.([A-Z])(?:\.){0,1}(?:\.([0-9]+)){0,1} /){
-                $link_number = sprintf("a%s", lc($1));
-                $link_number .= sprintf("%02d", $2) if $2;
-
-            }else{
+        else {
+            if ( $title =~ $regex_appendix ) {
+                $link_number = sprintf( "a%s", lc($1) );
+                $link_number .= sprintf( "%02d", $2 ) if $2;
+                $link_number .= sprintf( "%02d", $3 ) if $3;
+            }
+            else {
                 print "FAIL: failed $level title: '$title'\n";
                 next;
             }
         }
-        unless (defined $title_level_hash{$level}){
+        unless ( defined $title_level_hash{$level} ) {
             $title_level_hash{$level} = [];
         }
-        push @{$title_level_hash{$level}}, "* [$title][$link_number]";
+        push @{ $title_level_hash{$level} }, "* [$title][$link_number]";
         push @links, "[$link_number]: #$link";
     }
 }
 
-foreach my $link_level (sort(keys(%title_level_hash))){
-    printf("%s", join("\n", @{$title_level_hash{$link_level}}));
+foreach my $link_level ( sort( keys(%title_level_hash) ) ) {
+    printf( "%s", join( "\n", @{ $title_level_hash{$link_level} } ) );
     print("\n");
     print("\n");
 }
 
-printf("%s", join("\n", @links));
+printf( "%s", join( "\n", @links ) );
 print("\n");
