@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ifconfig tun0 1>/dev/null 2>/dev/null
+ip link | egrep "(tun0)|(redhat0)" 1>/dev/null 2>/dev/null
 if [ $? -ne 0 ];then
     logger -t $0 -i -- "INFO: mbsync cannot start withou VPN"
     exit 0
