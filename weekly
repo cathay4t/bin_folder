@@ -1,0 +1,13 @@
+#!/bin/bash
+
+printf  "Gris Ge: Weekly Status Report: $(date +%Y) Week %02d\n" \
+    $(($(date "+%V"|sed -e 's/^0\\+//') - 1))
+
+echo "Planed Achievement:"
+echo
+echo "Planed but missed:"
+echo
+echo "Unplanned Achievement:"
+echo
+echo "Plan:"
+echo
