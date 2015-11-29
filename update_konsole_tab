@@ -4,7 +4,7 @@ if [ "CHK$KONSOLE_DBUS_SESSION" == "CHK" ];then
     exit 0
 fi
 
-OLD_FORMAT="%d : %n"
+OLD_FORMAT="%n"
 QDBUS_COMMAND="qdbus org.kde.konsole $KONSOLE_DBUS_SESSION"
 TITLE_ROLE=0
 
