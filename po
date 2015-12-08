@@ -1,0 +1,8 @@
+#!/bin/bash
+
+killall firefox
+killall xchat
+vm sa
+sleep 2
+
+sudo shutdown
